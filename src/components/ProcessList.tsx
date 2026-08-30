@@ -40,7 +40,7 @@ export const ProcessList: React.FC<ProcessListProps> = ({ onOpenSettings }) => {
   const [statusFilter, setStatusFilter] = useState<"all" | "running" | "stopped">("all");
   const [globalEnv, setGlobalEnv] = useState("local");
   const [processToStop, setProcessToStop] = useState<ManagedProcessStatus | null>(null);
-  const [selectedLogsProcess, setSelectedLogsProcess] = useState<ManagedProcessStatus | null>(null);
+  const [selectedLogsProcessName, setSelectedLogsProcessName] = useState<string | null>(null);
   const [notifications, setNotifications] = useState<NotificationMessage[]>([]);
 
   // Track pending mutation names
@@ -183,6 +183,34 @@ export const ProcessList: React.FC<ProcessListProps> = ({ onOpenSettings }) => {
     }
   };
 
+  const handleStart = (name: string, env: string) => {
+    // 1. Open Logs viewer modal for the process immediately when starting
+    setSelectedLogsProcessName(name);
+    // 2. Trigger the start process mutation
+    startMutation.mutate({ name, env });
+  };
+
+  const handleCloseLogsModal = async () => {
+    setSelectedLogsProcessName(null);
+    // Re-fetch process list after closing Logs viewer modal
+    await queryClient.invalidateQueries({ queryKey: ["processes"] });
+    refetch();
+  };
+
+  const selectedLogsProcess = processes.find((p) => p.name === selectedLogsProcessName) || (
+    selectedLogsProcessName
+      ? {
+          name: selectedLogsProcessName,
+          workingDirectory: "",
+          status: "started",
+          processId: null,
+          port: null,
+          env: globalEnv,
+          appUrl: null,
+        }
+      : null
+  );
+
   // Filter processes
   const filteredProcesses = processes.filter((p) => {
     const matchesSearch =
@@ -219,7 +247,7 @@ export const ProcessList: React.FC<ProcessListProps> = ({ onOpenSettings }) => {
       <ProcessLogsModal
         process={selectedLogsProcess}
         isOpen={Boolean(selectedLogsProcess)}
-        onClose={() => setSelectedLogsProcess(null)}
+        onClose={handleCloseLogsModal}
         isAuthenticated={isAuthenticated}
       />
 
@@ -466,9 +494,9 @@ export const ProcessList: React.FC<ProcessListProps> = ({ onOpenSettings }) => {
               isStarting={pendingStartNames.has(proc.name)}
               isStopping={pendingStopNames.has(proc.name)}
               isAuthenticated={isAuthenticated}
-              onStart={(name, env) => startMutation.mutate({ name, env })}
+              onStart={handleStart}
               onRequestStop={(p) => setProcessToStop(p)}
-              onViewLogs={(p) => setSelectedLogsProcess(p)}
+              onViewLogs={(p) => setSelectedLogsProcessName(p.name)}
             />
           ))}
         </div>

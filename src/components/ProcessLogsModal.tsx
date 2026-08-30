@@ -97,6 +97,17 @@ export const ProcessLogsModal: React.FC<ProcessLogsModalProps> = ({
     };
   }, [isOpen, process?.name, isAuthenticated]);
 
+  // Escape key handler to close modal
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && isOpen) {
+        onClose();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen, onClose]);
+
   // Handle auto-scroll to bottom
   useEffect(() => {
     if (autoScroll && logContainerRef.current) {
