@@ -214,7 +214,7 @@ export const ProcessLogsModal: React.FC<ProcessLogsModalProps> = ({
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <h3 className="text-base font-bold text-white truncate font-mono">{process.name}</h3>
+                <h3 className="text-base font-bold text-white font-mono break-words">{process.name}</h3>
                 <span className="text-xs text-slate-400 font-mono">
                   (PID: {process.processId ?? "—"})
                 </span>
