@@ -17,6 +17,7 @@ import { fetchProcesses, startProcess, stopProcess, ApiError } from "../lib/api"
 import { ManagedProcessStatus } from "../types";
 import { ProcessCard } from "./ProcessCard";
 import { StopConfirmModal } from "./StopConfirmModal";
+import { ProcessLogsModal } from "./ProcessLogsModal";
 import { NotificationBanner, NotificationMessage } from "./NotificationBanner";
 import { useAuth } from "../context/AuthContext";
 
@@ -33,6 +34,7 @@ export const ProcessList: React.FC<ProcessListProps> = ({ onOpenSettings }) => {
   const [statusFilter, setStatusFilter] = useState<"all" | "running" | "stopped">("all");
   const [globalEnv, setGlobalEnv] = useState("local");
   const [processToStop, setProcessToStop] = useState<ManagedProcessStatus | null>(null);
+  const [selectedLogsProcess, setSelectedLogsProcess] = useState<ManagedProcessStatus | null>(null);
   const [notifications, setNotifications] = useState<NotificationMessage[]>([]);
 
   // Track pending mutation names
@@ -205,6 +207,14 @@ export const ProcessList: React.FC<ProcessListProps> = ({ onOpenSettings }) => {
         isPending={stopMutation.isPending}
         onConfirm={handleConfirmStop}
         onCancel={() => setProcessToStop(null)}
+      />
+
+      {/* Process Logs Streaming Modal */}
+      <ProcessLogsModal
+        process={selectedLogsProcess}
+        isOpen={Boolean(selectedLogsProcess)}
+        onClose={() => setSelectedLogsProcess(null)}
+        isAuthenticated={isAuthenticated}
       />
 
       {/* Overview Title Banner */}
@@ -444,6 +454,7 @@ export const ProcessList: React.FC<ProcessListProps> = ({ onOpenSettings }) => {
               isAuthenticated={isAuthenticated}
               onStart={(name, env) => startMutation.mutate({ name, env })}
               onRequestStop={(p) => setProcessToStop(p)}
+              onViewLogs={(p) => setSelectedLogsProcess(p)}
             />
           ))}
         </div>

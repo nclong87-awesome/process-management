@@ -6,7 +6,7 @@ import {
   getStoredToken,
   isTokenValid,
 } from "./auth";
-import { ManagedProcessStatus, StartProcessResponse, StopProcessResponse } from "../types";
+import { ManagedProcessLog, ManagedProcessStatus, StartProcessResponse, StopProcessResponse } from "../types";
 
 export const getApiBaseUrl = (): string => {
   const metaEnv = (import.meta as unknown as { env?: { VITE_API_BASE_URL?: string } }).env;
@@ -185,4 +185,158 @@ export async function stopProcess(name: string): Promise<StopProcessResponse> {
   return authenticatedRequest<StopProcessResponse>(path, {
     method: "POST",
   });
+}
+
+/**
+ * GET /api/processes/{name}/logs
+ * Streams live SSE process logs using fetch & ReadableStream.
+ */
+export async function streamProcessLogs(
+  name: string,
+  onLog: (log: ManagedProcessLog) => void,
+  onError: (error: Error) => void,
+  onClose: () => void,
+  signal: AbortSignal
+): Promise<void> {
+  const baseUrl = getApiBaseUrl();
+
+  let token: string;
+  try {
+    token = await ensureValidToken(baseUrl);
+  } catch (err) {
+    const authErr = err instanceof AuthError ? err : new AuthError(String(err));
+    notifyAuthError(authErr);
+    onError(authErr);
+    return;
+  }
+
+  const encodedName = encodeURIComponent(name);
+  const url = `${baseUrl}/api/processes/${encodedName}/logs`;
+
+  const fetchStream = async (authToken: string, isRetry = false): Promise<void> => {
+    let response: Response;
+    try {
+      response = await fetch(url, {
+        method: "GET",
+        headers: {
+          Accept: "text/event-stream",
+          Authorization: `Bearer ${authToken}`,
+        },
+        signal,
+      });
+    } catch (netErr) {
+      if (signal.aborted) return;
+      throw new ApiError(`Network request failed: ${netErr instanceof Error ? netErr.message : String(netErr)}`);
+    }
+
+    if (response.status === 401) {
+      clearStoredToken();
+      if (!isRetry) {
+        try {
+          const newToken = await ensureValidToken(baseUrl);
+          return await fetchStream(newToken, true);
+        } catch (retryErr) {
+          const authErr = retryErr instanceof AuthError ? retryErr : new AuthError("Session expired", "UNAUTHORIZED");
+          notifyAuthError(authErr);
+          throw authErr;
+        }
+      } else {
+        const authErr = new AuthError("Unauthorized for logs stream", "UNAUTHORIZED");
+        notifyAuthError(authErr);
+        throw authErr;
+      }
+    }
+
+    if (response.status === 403) {
+      clearStoredToken();
+      const authErr = new AuthError("Access forbidden for logs stream (403)", "FORBIDDEN");
+      notifyAuthError(authErr);
+      throw authErr;
+    }
+
+    if (!response.ok) {
+      let errorMsg = `Logs request failed with status ${response.status}`;
+      try {
+        const errJson = await response.json();
+        if (errJson && typeof errJson === "object" && typeof errJson.error === "string") {
+          errorMsg = errJson.error;
+        }
+      } catch {
+        // Response body was not JSON
+      }
+      throw new ApiError(errorMsg, response.status);
+    }
+
+    if (!response.body) {
+      throw new ApiError("No response body available for log stream");
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder("utf-8");
+    let buffer = "";
+    let currentEventType = "message";
+    let currentDataLines: string[] = [];
+
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n");
+      buffer = lines.pop() ?? "";
+
+      for (const line of lines) {
+        const trimmed = line.trimEnd();
+
+        if (trimmed === "") {
+          if (currentDataLines.length > 0) {
+            const dataStr = currentDataLines.join("\n");
+            if (currentEventType === "log" || currentEventType === "message") {
+              try {
+                const logData = JSON.parse(dataStr) as ManagedProcessLog;
+                if (logData && typeof logData.message === "string") {
+                  onLog(logData);
+                }
+              } catch {
+                // Ignore non-JSON payload
+              }
+            }
+          }
+          currentEventType = "message";
+          currentDataLines = [];
+        } else if (trimmed.startsWith(":")) {
+          // Comment frame
+        } else if (trimmed.startsWith("event:")) {
+          currentEventType = trimmed.slice(6).trim();
+        } else if (trimmed.startsWith("data:")) {
+          currentDataLines.push(trimmed.slice(5).trimStart());
+        }
+      }
+    }
+
+    if (buffer.trimEnd() !== "") {
+      const trimmed = buffer.trimEnd();
+      if (trimmed.startsWith("data:")) {
+        const dataStr = trimmed.slice(5).trimStart();
+        try {
+          const logData = JSON.parse(dataStr) as ManagedProcessLog;
+          if (logData && typeof logData.message === "string") {
+            onLog(logData);
+          }
+        } catch {}
+      }
+    }
+
+    onClose();
+  };
+
+  try {
+    await fetchStream(token);
+  } catch (err: unknown) {
+    if (signal.aborted) {
+      onClose();
+      return;
+    }
+    onError(err instanceof Error ? err : new Error(String(err)));
+  }
 }

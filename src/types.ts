@@ -37,6 +37,12 @@ export type ApiErrorResponse = {
   processId?: number;
 };
 
+export type ManagedProcessLog = {
+  timestamp: string;
+  stream: "stdout" | "stderr";
+  message: string;
+};
+
 export type ClientCredentials = {
   clientId: string;
   clientSecret: string;
