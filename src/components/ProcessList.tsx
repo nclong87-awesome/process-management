@@ -249,6 +249,7 @@ export const ProcessList: React.FC<ProcessListProps> = ({ onOpenSettings }) => {
         isOpen={Boolean(selectedLogsProcess)}
         onClose={handleCloseLogsModal}
         isAuthenticated={isAuthenticated}
+        onOpenSettings={onOpenSettings}
       />
 
       {/* Control Toolbar */}

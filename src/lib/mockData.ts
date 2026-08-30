@@ -164,26 +164,37 @@ export async function mockStopProcess(name: string): Promise<StopProcessResponse
 
 export function generateMockLogStream(
   name: string,
-  onLog: (log: ManagedProcessLog) => void,
-  _onError: (error: Error) => void,
-  onClose: () => void,
-  signal: AbortSignal
+  sinceMinutes?: number,
+  onConnect?: () => void,
+  onLog?: (log: ManagedProcessLog) => void,
+  _onError?: (error: Error) => void,
+  onClose?: () => void,
+  signal?: AbortSignal
 ): void {
   let isClosed = false;
+  const now = Date.now();
+  const historyMinutes = typeof sinceMinutes === "number" ? sinceMinutes : 10;
 
-  const emit = (message: string, stream: "stdout" | "stderr" = "stdout") => {
-    if (isClosed || signal.aborted) return;
+  const emit = (message: string, stream: "stdout" | "stderr" = "stdout", timestampOffsetMs = 0) => {
+    if (isClosed || signal?.aborted || !onLog) return;
+    const ts = new Date(now - timestampOffsetMs).toISOString();
     onLog({
-      timestamp: new Date().toISOString(),
+      timestamp: ts,
       stream,
       message,
     });
   };
 
-  emit(`[MOCK MODE] Attached live log stream to process '${name}'`, "stdout");
-  emit(`[INFO] Process ${name} initialized in local container sandbox`, "stdout");
-  emit(`[INFO] Thread worker pool started with 4 threads`, "stdout");
-  emit(`[DEBUG] Initializing event loop and database socket handlers...`, "stdout");
+  // Signal successful connection header response
+  onConnect?.();
+
+  // Generate mock replayed logs within the requested history window (sinceMinutes)
+  const windowMs = historyMinutes * 60 * 1000;
+  emit(`[MOCK MODE] Connected log stream for '${name}' (History window: sinceMinutes=${historyMinutes})`, "stdout", Math.min(windowMs, 500000));
+  emit(`[INFO] Process ${name} initialized in local container sandbox`, "stdout", Math.min(windowMs * 0.8, 400000));
+  emit(`[INFO] Worker pool started with 4 threads (alloc 512MB RAM)`, "stdout", Math.min(windowMs * 0.6, 300000));
+  emit(`[DEBUG] Database pool socket connections verified`, "stdout", Math.min(windowMs * 0.4, 200000));
+  emit(`[WARN] Standard error diagnostic test log frame`, "stderr", Math.min(windowMs * 0.2, 100000));
 
   const sampleMessages = [
     { msg: `GET /api/v1/healthcheck 200 OK - 2.1ms`, stream: "stdout" as const },
@@ -198,26 +209,28 @@ export function generateMockLogStream(
 
   let counter = 0;
   const interval = setInterval(() => {
-    if (signal.aborted || isClosed) {
+    if (signal?.aborted || isClosed) {
       clearInterval(interval);
       return;
     }
     const sample = sampleMessages[counter % sampleMessages.length];
     counter++;
-    emit(sample.msg, sample.stream);
+    emit(sample.msg, sample.stream, 0);
   }, 1800);
 
   const onAbort = () => {
     if (!isClosed) {
       isClosed = true;
       clearInterval(interval);
-      onClose();
+      onClose?.();
     }
   };
 
-  if (signal.aborted) {
-    onAbort();
-  } else {
-    signal.addEventListener("abort", onAbort, { once: true });
+  if (signal) {
+    if (signal.aborted) {
+      onAbort();
+    } else {
+      signal.addEventListener("abort", onAbort, { once: true });
+    }
   }
 }
