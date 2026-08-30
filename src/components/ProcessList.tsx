@@ -101,10 +101,16 @@ export const ProcessList: React.FC<ProcessListProps> = ({ onOpenSettings }) => {
             : p
         );
       });
-      queryClient.invalidateQueries({ queryKey: ["processes"] });
     },
     onError: (err: unknown, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["processes"] });
+      queryClient.setQueryData<ManagedProcessStatus[]>(["processes"], (old) => {
+        if (!old) return old;
+        return old.map((p) =>
+          p.name === variables.name
+            ? { ...p, status: "stopped", processId: null }
+            : p
+        );
+      });
       let errMsg = "Failed to start process.";
       let details: string | undefined;
 
