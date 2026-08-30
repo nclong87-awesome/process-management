@@ -37,6 +37,9 @@ export const ProcessLogsModal: React.FC<ProcessLogsModalProps> = ({
   >("idle");
   const [streamError, setStreamError] = useState<string | null>(null);
 
+  const [retryAttempt, setRetryAttempt] = useState(0);
+  const [retryCountdown, setRetryCountdown] = useState<number | null>(null);
+
   // Filters
   const [searchQuery, setSearchQuery] = useState("");
   const [streamFilter, setStreamFilter] = useState<"all" | "stdout" | "stderr">("all");
@@ -45,23 +48,34 @@ export const ProcessLogsModal: React.FC<ProcessLogsModalProps> = ({
 
   const logContainerRef = useRef<HTMLDivElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const countdownIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Connect to SSE stream when modal opens or process changes
-  useEffect(() => {
-    if (!isOpen || !process || !isAuthenticated) {
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
-        abortControllerRef.current = null;
-      }
-      setStreamStatus("idle");
-      setStreamError(null);
-      return;
+  const clearRetryTimers = () => {
+    if (retryTimeoutRef.current) {
+      clearTimeout(retryTimeoutRef.current);
+      retryTimeoutRef.current = null;
+    }
+    if (countdownIntervalRef.current) {
+      clearInterval(countdownIntervalRef.current);
+      countdownIntervalRef.current = null;
+    }
+  };
+
+  const startLogStream = (attemptCount = 0) => {
+    if (!process || !isAuthenticated) return;
+
+    clearRetryTimers();
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
     }
 
-    // Reset state for new session
-    setLogs([]);
     setStreamStatus("connecting");
-    setStreamError(null);
+    if (attemptCount === 0) {
+      setStreamError(null);
+    }
+    setRetryAttempt(attemptCount);
+    setRetryCountdown(null);
 
     const controller = new AbortController();
     abortControllerRef.current = controller;
@@ -71,16 +85,54 @@ export const ProcessLogsModal: React.FC<ProcessLogsModalProps> = ({
       (newLog) => {
         setLogs((prev) => [...prev, newLog]);
         setStreamStatus("live");
+        setStreamError(null);
+        setRetryAttempt(0);
+        setRetryCountdown(null);
+        clearRetryTimers();
       },
       (err) => {
         if (controller.signal.aborted) return;
 
-        if (err instanceof ApiError && err.status === 404) {
-          setStreamStatus("not_running");
-          setStreamError("Process is not currently running. Live log streaming requires an active process.");
+        const baseMsg =
+          err instanceof ApiError && err.status === 404
+            ? "Process is not currently running. Live log streaming requires an active process."
+            : err.message || "Failed to establish live log stream.";
+
+        const maxAttempts = 5;
+        if (attemptCount < maxAttempts) {
+          const nextAttempt = attemptCount + 1;
+          setRetryAttempt(nextAttempt);
+          setRetryCountdown(2);
+          setStreamStatus(err instanceof ApiError && err.status === 404 ? "not_running" : "error");
+          setStreamError(
+            `${baseMsg} Retrying in 2s... (Attempt ${nextAttempt}/${maxAttempts})`
+          );
+
+          let secondsLeft = 2;
+          countdownIntervalRef.current = setInterval(() => {
+            secondsLeft -= 1;
+            if (secondsLeft > 0) {
+              setRetryCountdown(secondsLeft);
+              setStreamError(
+                `${baseMsg} Retrying in ${secondsLeft}s... (Attempt ${nextAttempt}/${maxAttempts})`
+              );
+            } else {
+              if (countdownIntervalRef.current) {
+                clearInterval(countdownIntervalRef.current);
+                countdownIntervalRef.current = null;
+              }
+            }
+          }, 1000);
+
+          retryTimeoutRef.current = setTimeout(() => {
+            startLogStream(nextAttempt);
+          }, 2000);
         } else {
-          setStreamStatus("error");
-          setStreamError(err.message || "Failed to establish live log stream.");
+          setStreamStatus(err instanceof ApiError && err.status === 404 ? "not_running" : "error");
+          setStreamError(
+            `${baseMsg} Max retry attempts reached (${maxAttempts}/${maxAttempts}).`
+          );
+          setRetryCountdown(null);
         }
       },
       () => {
@@ -90,10 +142,32 @@ export const ProcessLogsModal: React.FC<ProcessLogsModalProps> = ({
       },
       controller.signal
     );
+  };
+
+  // Connect to SSE stream when modal opens or process changes
+  useEffect(() => {
+    if (!isOpen || !process || !isAuthenticated) {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+        abortControllerRef.current = null;
+      }
+      clearRetryTimers();
+      setStreamStatus("idle");
+      setStreamError(null);
+      setRetryAttempt(0);
+      setRetryCountdown(null);
+      return;
+    }
+
+    setLogs([]);
+    startLogStream(0);
 
     return () => {
-      controller.abort();
-      abortControllerRef.current = null;
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+        abortControllerRef.current = null;
+      }
+      clearRetryTimers();
     };
   }, [isOpen, process?.name, isAuthenticated]);
 
@@ -159,38 +233,7 @@ export const ProcessLogsModal: React.FC<ProcessLogsModalProps> = ({
 
   const handleRetryStream = () => {
     if (!process || !isAuthenticated) return;
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-    }
-    setStreamStatus("connecting");
-    setStreamError(null);
-
-    const controller = new AbortController();
-    abortControllerRef.current = controller;
-
-    streamProcessLogs(
-      process.name,
-      (newLog) => {
-        setLogs((prev) => [...prev, newLog]);
-        setStreamStatus("live");
-      },
-      (err) => {
-        if (controller.signal.aborted) return;
-        if (err instanceof ApiError && err.status === 404) {
-          setStreamStatus("not_running");
-          setStreamError("Process is not currently running.");
-        } else {
-          setStreamStatus("error");
-          setStreamError(err.message || "Failed to establish live log stream.");
-        }
-      },
-      () => {
-        if (!controller.signal.aborted) {
-          setStreamStatus((prev) => (prev === "live" ? "ended" : prev));
-        }
-      },
-      controller.signal
-    );
+    startLogStream(0);
   };
 
   if (!isOpen || !process) return null;
@@ -400,10 +443,10 @@ export const ProcessLogsModal: React.FC<ProcessLogsModalProps> = ({
               </div>
               <button
                 onClick={handleRetryStream}
-                className="flex items-center gap-1 px-3 py-1 bg-rose-900/80 hover:bg-rose-800 text-rose-100 rounded-lg text-xs font-semibold shrink-0 font-sans border border-rose-700/60 transition-colors"
+                className="flex items-center gap-1.5 px-3 py-1 bg-rose-900/80 hover:bg-rose-800 text-rose-100 rounded-lg text-xs font-semibold shrink-0 font-sans border border-rose-700/60 transition-colors"
               >
-                <RefreshCw className="w-3 h-3" />
-                <span>Reconnect</span>
+                <RefreshCw className={`w-3 h-3 ${streamStatus === "connecting" ? "animate-spin" : ""}`} />
+                <span>{retryCountdown !== null ? `Retrying (${retryCountdown}s)...` : "Reconnect"}</span>
               </button>
             </div>
           )}
