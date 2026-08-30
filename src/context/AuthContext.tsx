@@ -9,6 +9,7 @@ import {
   setMemoryCredentials,
 } from "../lib/auth";
 import { getApiBaseUrl, onAuthError } from "../lib/api";
+import { isMockModeEnabled, resetMockData, setMockModeEnabled } from "../lib/mockData";
 
 interface AuthContextType {
   token: StoredAuthToken | null;
@@ -16,7 +17,10 @@ interface AuthContextType {
   hasMemoryCredentials: boolean;
   authError: string | null;
   isLoginOpen: boolean;
+  isMockMode: boolean;
   setIsLoginOpen: (open: boolean) => void;
+  toggleMockMode: (enabled?: boolean) => void;
+  resetMockDataStore: () => void;
   login: (clientId: string, clientSecret: string) => Promise<void>;
   logout: () => void;
   clearAuthError: () => void;
@@ -28,12 +32,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [token, setToken] = useState<StoredAuthToken | null>(() => getStoredToken());
   const [hasMemoryCredentials, setHasMemoryCredentials] = useState<boolean>(() => Boolean(getMemoryCredentials()));
   const [authError, setAuthError] = useState<string | null>(null);
+  const [isMockMode, setIsMockMode] = useState<boolean>(() => isMockModeEnabled());
+
   const [isLoginOpen, setIsLoginOpen] = useState<boolean>(() => {
+    if (isMockModeEnabled()) return false;
     const initialToken = getStoredToken();
     return !isTokenValid(initialToken, 0);
   });
 
-  const isAuthenticated = Boolean(token && isTokenValid(token, 0));
+  const isAuthenticated = isMockMode || Boolean(token && isTokenValid(token, 0));
+
+  const toggleMockMode = useCallback((enabled?: boolean) => {
+    setIsMockMode((prev) => {
+      const next = enabled !== undefined ? enabled : !prev;
+      setMockModeEnabled(next);
+      if (next) {
+        setAuthError(null);
+        setIsLoginOpen(false);
+      }
+      return next;
+    });
+  }, []);
+
+  const resetMockDataStore = useCallback(() => {
+    resetMockData();
+  }, []);
 
   const clearAuthError = useCallback(() => {
     setAuthError(null);
@@ -45,8 +68,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setToken(null);
     setHasMemoryCredentials(false);
     setAuthError(null);
-    setIsLoginOpen(true);
-  }, []);
+    if (!isMockMode) {
+      setIsLoginOpen(true);
+    }
+  }, [isMockMode]);
 
   const login = useCallback(async (clientId: string, clientSecret: string) => {
     setAuthError(null);
@@ -78,6 +103,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Listen to background API auth errors (e.g., 401, 403)
   useEffect(() => {
     const unsubscribe = onAuthError((err) => {
+      if (isMockModeEnabled()) return;
       const currentToken = getStoredToken();
       setToken(currentToken);
       setAuthError(err.message || "Authentication error occurred");
@@ -94,7 +120,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         hasMemoryCredentials,
         authError,
         isLoginOpen,
+        isMockMode,
         setIsLoginOpen,
+        toggleMockMode,
+        resetMockDataStore,
         login,
         logout,
         clearAuthError,

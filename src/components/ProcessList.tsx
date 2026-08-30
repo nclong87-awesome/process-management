@@ -12,6 +12,7 @@ import {
   Activity,
   Layers,
   Sparkles,
+  RotateCcw,
 } from "lucide-react";
 import { fetchProcesses, startProcess, stopProcess, ApiError } from "../lib/api";
 import { ManagedProcessStatus } from "../types";
@@ -27,7 +28,12 @@ interface ProcessListProps {
 
 export const ProcessList: React.FC<ProcessListProps> = ({ onOpenSettings }) => {
   const queryClient = useQueryClient();
-  const { isAuthenticated, setIsLoginOpen } = useAuth();
+  const { isAuthenticated, setIsLoginOpen, isMockMode, toggleMockMode, resetMockDataStore } = useAuth();
+
+  const handleEnableMockMode = () => {
+    toggleMockMode(true);
+    queryClient.invalidateQueries({ queryKey: ["processes"] });
+  };
 
   // Local state
   const [searchQuery, setSearchQuery] = useState("");
@@ -217,14 +223,6 @@ export const ProcessList: React.FC<ProcessListProps> = ({ onOpenSettings }) => {
         isAuthenticated={isAuthenticated}
       />
 
-      {/* Overview Title Banner */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-1">
-        <div>
-          <h2 className="text-xs font-bold text-slate-500 uppercase tracking-wider">Managed Processes</h2>
-          <p className="text-2xl font-extrabold text-slate-900 tracking-tight">System Overview</p>
-        </div>
-      </div>
-
       {/* Control Toolbar */}
       <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-xs space-y-4">
         <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">
@@ -350,16 +348,25 @@ export const ProcessList: React.FC<ProcessListProps> = ({ onOpenSettings }) => {
           <div className="max-w-md mx-auto space-y-2">
             <h2 className="text-lg font-bold text-slate-900">Authentication Required</h2>
             <p className="text-xs text-slate-600 leading-relaxed">
-              To discover and manage backend processes, please provide your OAuth Client ID and Client Secret in Settings.
+              To discover and manage backend processes, please provide your OAuth Client ID and Client Secret in Settings, or enable Sample Mock API Data mode.
             </p>
           </div>
-          <button
-            onClick={() => setIsLoginOpen(true)}
-            className="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs rounded-lg shadow-sm transition-colors"
-          >
-            <KeyRound className="w-4 h-4" />
-            <span>Open Authentication Settings</span>
-          </button>
+          <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+            <button
+              onClick={handleEnableMockMode}
+              className="inline-flex items-center gap-2 px-5 py-2.5 bg-purple-600 hover:bg-purple-700 text-white font-semibold text-xs rounded-lg shadow-sm transition-colors"
+            >
+              <Sparkles className="w-4 h-4" />
+              <span>Explore with Sample Mock Data</span>
+            </button>
+            <button
+              onClick={() => setIsLoginOpen(true)}
+              className="inline-flex items-center gap-2 px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold text-xs rounded-lg border border-slate-300 transition-colors"
+            >
+              <KeyRound className="w-4 h-4 text-slate-600" />
+              <span>Open Settings & Credentials</span>
+            </button>
+          </div>
         </div>
       )}
 
@@ -394,13 +401,20 @@ export const ProcessList: React.FC<ProcessListProps> = ({ onOpenSettings }) => {
               {error instanceof Error ? error.message : "Network error or API unreachable."}
             </p>
           </div>
-          <div className="flex justify-center gap-3">
+          <div className="flex flex-wrap justify-center gap-3">
             <button
               onClick={() => refetch()}
               className="inline-flex items-center gap-2 px-4 py-2 bg-white hover:bg-slate-50 text-slate-800 text-xs font-semibold rounded-lg border border-slate-300 shadow-2xs transition-colors"
             >
               <RefreshCw className="w-3.5 h-3.5 text-indigo-600" />
               <span>Retry Request</span>
+            </button>
+            <button
+              onClick={handleEnableMockMode}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white text-xs font-semibold rounded-lg shadow-2xs transition-colors"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>Use Sample Mock Data</span>
             </button>
             <button
               onClick={onOpenSettings}

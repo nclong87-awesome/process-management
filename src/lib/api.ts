@@ -7,6 +7,13 @@ import {
   isTokenValid,
 } from "./auth";
 import { ManagedProcessLog, ManagedProcessStatus, StartProcessResponse, StopProcessResponse } from "../types";
+import {
+  generateMockLogStream,
+  getMockProcesses,
+  isMockModeEnabled,
+  mockStartProcess,
+  mockStopProcess,
+} from "./mockData";
 
 export const getApiBaseUrl = (): string => {
   const metaEnv = (import.meta as unknown as { env?: { VITE_API_BASE_URL?: string } }).env;
@@ -46,6 +53,7 @@ function notifyAuthError(err: AuthError): void {
  * Checks if the client currently has a usable session (either valid token or memory credentials).
  */
 export function hasUsableAuth(): boolean {
+  if (isMockModeEnabled()) return true;
   const storedToken = getStoredToken();
   if (isTokenValid(storedToken, 0)) return true;
   const creds = getMemoryCredentials();
@@ -145,6 +153,9 @@ async function authenticatedRequest<T>(
  * GET /api/processes
  */
 export async function fetchProcesses(): Promise<ManagedProcessStatus[]> {
+  if (isMockModeEnabled()) {
+    return getMockProcesses();
+  }
   if (!hasUsableAuth()) {
     throw new AuthError("Authentication required. Please log in with Client ID and Client Secret in Settings.", "NO_AUTH");
   }
@@ -157,6 +168,9 @@ export async function fetchProcesses(): Promise<ManagedProcessStatus[]> {
  * POST /api/processes/{name}/start?env=local
  */
 export async function startProcess(name: string, env = "local"): Promise<StartProcessResponse> {
+  if (isMockModeEnabled()) {
+    return mockStartProcess(name, env);
+  }
   if (!hasUsableAuth()) {
     throw new AuthError("Authentication required. Please log in with Client ID and Client Secret in Settings.", "NO_AUTH");
   }
@@ -175,6 +189,9 @@ export async function startProcess(name: string, env = "local"): Promise<StartPr
  * POST /api/processes/{name}/stop
  */
 export async function stopProcess(name: string): Promise<StopProcessResponse> {
+  if (isMockModeEnabled()) {
+    return mockStopProcess(name);
+  }
   if (!hasUsableAuth()) {
     throw new AuthError("Authentication required. Please log in with Client ID and Client Secret in Settings.", "NO_AUTH");
   }
@@ -198,6 +215,11 @@ export async function streamProcessLogs(
   onClose: () => void,
   signal: AbortSignal
 ): Promise<void> {
+  if (isMockModeEnabled()) {
+    generateMockLogStream(name, onLog, onError, onClose, signal);
+    return;
+  }
+
   const baseUrl = getApiBaseUrl();
 
   let token: string;

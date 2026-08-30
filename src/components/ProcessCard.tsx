@@ -81,10 +81,11 @@ export const ProcessCard: React.FC<ProcessCardProps> = ({
     >
       {/* Top Header Row */}
       <div>
-        <div className="flex items-start justify-between gap-3 mb-3">
-          <div className="flex items-center gap-2.5 min-w-0">
+        {/* Header Bar: Status Badge & Logs Action */}
+        <div className="flex items-center justify-between gap-2 mb-2.5">
+          <div className="flex items-center gap-2">
             <div
-              className={`p-2 rounded-lg border shrink-0 ${
+              className={`p-1.5 rounded-lg border shrink-0 ${
                 isRunning
                   ? "bg-emerald-100 border-emerald-200 text-emerald-700"
                   : "bg-slate-100 border-slate-200 text-slate-400"
@@ -93,50 +94,13 @@ export const ProcessCard: React.FC<ProcessCardProps> = ({
               <Terminal className="w-4 h-4" />
             </div>
 
-            <div className="min-w-0 flex-1">
-              <h3
-                className={`text-lg font-bold tracking-tight break-words ${
-                  isRunning ? "text-slate-900" : "text-slate-600"
-                }`}
-                title={process.name}
-              >
-                {process.name}
-              </h3>
-              <div className="flex items-center gap-2 text-xs text-slate-500 mt-0.5 font-mono">
-                <span>PID: <strong className="text-slate-800 font-semibold">{process.processId !== null ? process.processId : "—"}</strong></span>
-                {process.port && (
-                  <>
-                    <span className="text-slate-300">•</span>
-                    <span className="flex items-center gap-1 text-indigo-600 font-medium">
-                      <Server className="w-3 h-3 text-indigo-500" />
-                      Port {process.port}
-                    </span>
-                  </>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Status Badge & View Logs */}
-          <div className="flex items-center gap-2 shrink-0">
-            <button
-              type="button"
-              onClick={() => onViewLogs(process)}
-              className="flex items-center gap-1.5 px-2.5 py-1 bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-700 rounded text-xs font-semibold transition-colors"
-              title={`View logs for ${process.name}`}
-              aria-label={`View logs for ${process.name}`}
-            >
-              <ScrollText className="w-3.5 h-3.5 text-indigo-600" />
-              <span>Logs</span>
-            </button>
-
             <div
-              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-bold uppercase tracking-wide shrink-0 ${
+              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold uppercase tracking-wide shrink-0 ${
                 isRunning
                   ? "bg-emerald-100 text-emerald-700 border border-emerald-200"
                   : isStarted
                   ? "bg-amber-100 text-amber-700 border border-amber-200"
-                  : "bg-slate-200 text-slate-600"
+                  : "bg-slate-100 text-slate-600 border border-slate-200"
               }`}
               role="status"
               aria-label={`Process status: ${process.status}`}
@@ -157,12 +121,49 @@ export const ProcessCard: React.FC<ProcessCardProps> = ({
                 </>
               ) : (
                 <>
-                  <Square className="w-3 h-3 text-slate-500 fill-slate-500" />
+                  <Square className="w-3 h-3 text-slate-400 fill-slate-400" />
                   <span>STOPPED</span>
                 </>
               )}
             </div>
           </div>
+
+          <button
+            type="button"
+            onClick={() => onViewLogs(process)}
+            className="flex items-center gap-1.5 px-2.5 py-1 bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-700 rounded-md text-xs font-semibold transition-colors shrink-0"
+            title={`View logs for ${process.name}`}
+            aria-label={`View logs for ${process.name}`}
+          >
+            <ScrollText className="w-3.5 h-3.5 text-indigo-600" />
+            <span>Logs</span>
+          </button>
+        </div>
+
+        {/* Process Name - Full Width */}
+        <div className="mb-1">
+          <h3
+            className={`text-base sm:text-lg font-bold font-mono tracking-tight leading-snug break-words ${
+              isRunning ? "text-slate-900" : "text-slate-700"
+            }`}
+            title={process.name}
+          >
+            {process.name}
+          </h3>
+        </div>
+
+        {/* PID & Port Details */}
+        <div className="flex items-center gap-2 text-xs text-slate-500 font-mono mb-3">
+          <span>PID: <strong className="text-slate-800 font-semibold">{process.processId !== null ? process.processId : "—"}</strong></span>
+          {process.port && (
+            <>
+              <span className="text-slate-300">•</span>
+              <span className="flex items-center gap-1 text-indigo-600 font-medium">
+                <Server className="w-3 h-3 text-indigo-500" />
+                Port {process.port}
+              </span>
+            </>
+          )}
         </div>
 
         {/* Process Meta Details */}
