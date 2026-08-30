@@ -39,6 +39,7 @@ export const ProcessCard: React.FC<ProcessCardProps> = ({
   // Local state for the start environment input (defaults to globalEnv or process.env or "local")
   const [selectedEnv, setSelectedEnv] = useState<string>(globalEnv || process.env || "local");
   const [copiedDir, setCopiedDir] = useState(false);
+  const [copiedUrl, setCopiedUrl] = useState(false);
   const [isLocalStarting, setIsLocalStarting] = useState(false);
 
   React.useEffect(() => {
@@ -56,6 +57,14 @@ export const ProcessCard: React.FC<ProcessCardProps> = ({
       navigator.clipboard.writeText(process.workingDirectory);
       setCopiedDir(true);
       setTimeout(() => setCopiedDir(false), 2000);
+    }
+  };
+
+  const handleCopyUrl = () => {
+    if (resolvedAppUrl) {
+      navigator.clipboard.writeText(resolvedAppUrl);
+      setCopiedUrl(true);
+      setTimeout(() => setCopiedUrl(false), 2000);
     }
   };
 
@@ -179,23 +188,32 @@ export const ProcessCard: React.FC<ProcessCardProps> = ({
             </span>
           </div>
 
-          {/* App URL Link if available */}
+          {/* App URL Copy Action */}
           {resolvedAppUrl && (
             <div className="flex items-center justify-between text-slate-600">
               <span className="text-slate-400 font-medium flex items-center gap-1.5">
                 <ExternalLink className="w-3.5 h-3.5 text-slate-400" />
                 App URL:
               </span>
-              <a
-                href={resolvedAppUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="font-mono text-indigo-600 hover:text-indigo-800 underline underline-offset-2 flex items-center gap-1 transition-colors font-medium"
-                title={`Open ${resolvedAppUrl} in new tab`}
-              >
-                <span className="truncate max-w-[180px]">{resolvedAppUrl}</span>
-                <ExternalLink className="w-3 h-3 shrink-0" />
-              </a>
+              <div className="flex items-center gap-1.5 min-w-0 max-w-[220px] sm:max-w-[260px]">
+                <button
+                  type="button"
+                  onClick={handleCopyUrl}
+                  className="font-mono text-xs text-indigo-600 hover:text-indigo-800 bg-indigo-50/60 hover:bg-indigo-100 px-2 py-0.5 rounded border border-indigo-200/80 flex items-center gap-1.5 transition-all font-medium truncate group cursor-pointer"
+                  title={`Copy ${resolvedAppUrl} to clipboard`}
+                  aria-label={`Copy ${resolvedAppUrl} to clipboard`}
+                >
+                  <span className="truncate max-w-[170px]">{resolvedAppUrl}</span>
+                  {copiedUrl ? (
+                    <span className="flex items-center gap-0.5 text-emerald-600 text-[11px] font-sans font-bold shrink-0">
+                      <Check className="w-3.5 h-3.5 text-emerald-600" />
+                      Copied!
+                    </span>
+                  ) : (
+                    <Copy className="w-3.5 h-3.5 text-indigo-500 group-hover:text-indigo-700 shrink-0" />
+                  )}
+                </button>
+              </div>
             </div>
           )}
 
