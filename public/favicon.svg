@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32" fill="none">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#6366f1" />
+      <stop offset="100%" stop-color="#4338ca" />
+    </linearGradient>
+    <linearGradient id="glow" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.9" />
+      <stop offset="100%" stop-color="#c7d2fe" stop-opacity="1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Rounded Base Badge -->
+  <rect width="32" height="32" rx="7.5" fill="url(#bg)" />
+  
+  <!-- Subtle Inset Highlight for Depth -->
+  <rect x="0.75" y="0.75" width="30.5" height="30.5" rx="6.75" stroke="#ffffff" stroke-opacity="0.18" stroke-width="1.5" />
+  
+  <!-- Activity / Process Pulse Line -->
+  <path
+    d="M4.5 16.5H9.5L12.5 10L16.5 22.5L19.5 13.5L22 16.5H27.5"
+    stroke="url(#glow)"
+    stroke-width="2.5"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+
+  <!-- Active Status / Live Process Indicator Dot -->
+  <circle cx="22" cy="16.5" r="1.5" fill="#38bdf8" />
+</svg>

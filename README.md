@@ -1,11 +1,42 @@
-<div align="center">
+# Process Manager
 
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
+A web dashboard for discovering, starting, monitoring, and stopping configured backend processes.
 
-  <h1>Built with AI Studio</h2>
+## Features
 
-  <p>The fastest path from prompt to production with Gemini.</p>
+- **Real Backend Process Control**: Interacts directly with the backend API (`GET /api/processes`, `POST /api/processes/{name}/start`, `POST /api/processes/{name}/stop`).
+- **OAuth Client Credentials Authentication**: Supports runtime OAuth authentication (`POST /oauth/token`). Client secrets are strictly held in React memory (RAM) for browser security.
+- **TanStack Query Integration**: Automatic server-state caching, invalidation, and pending mutation progress feedback.
+- **Accessible State Displays**: Running and stopped states are visually distinct using custom status badges, icons, animated indicators, and high contrast typography.
+- **Environment Targeting**: Per-process and global start-environment selectors (`env=local`, `dev`, `staging`, `production`).
+- **Stop Confirmation**: Safe confirmation modal before stopping running services.
 
-  <a href="https://aistudio.google.com/apps">Start building</a>
+## Environment Setup
 
-</div>
+Create a `.env` file or use `.env.example`:
+
+```env
+VITE_API_BASE_URL=http://localhost:5204
+```
+
+## Installation & Development
+
+1. Install dependencies:
+   ```bash
+   npm install
+   ```
+
+2. Start development server:
+   ```bash
+   npm run dev
+   ```
+
+3. Build for production:
+   ```bash
+   npm run build
+   ```
+
+4. Lint code & type-check:
+   ```bash
+   npm run lint
+   ```
