@@ -83,6 +83,14 @@ export const ProcessList: React.FC<ProcessListProps> = ({ onOpenSettings }) => {
         `Started process '${data.name}' (PID: ${data.processId})`,
         "Process Started"
       );
+      queryClient.setQueryData<ManagedProcessStatus[]>(["processes"], (old) => {
+        if (!old) return old;
+        return old.map((p) =>
+          p.name === data.name
+            ? { ...p, status: "started", processId: data.processId }
+            : p
+        );
+      });
       queryClient.invalidateQueries({ queryKey: ["processes"] });
     },
     onError: (err: unknown, variables) => {

@@ -4,7 +4,7 @@ export type ManagedProcessStatus = {
   env: string;
   port: number | null;
   appUrl: string | null;
-  status: "running" | "stopped";
+  status: "running" | "stopped" | "started";
   processId: number | null;
 };
 

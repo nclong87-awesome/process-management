@@ -2,5 +2,7 @@
   "name": "Process Manager",
   "description": "Authenticated dashboard for discovering, starting, monitoring, and stopping backend processes.",
   "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
 }

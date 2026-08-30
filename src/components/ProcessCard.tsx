@@ -38,6 +38,8 @@ export const ProcessCard: React.FC<ProcessCardProps> = ({
   const [copiedDir, setCopiedDir] = useState(false);
 
   const isRunning = process.status === "running";
+  const isStarted = process.status === "started";
+  const isStartingOrStarted = isStarting || isStarted;
 
   const handleCopyDir = () => {
     if (process.workingDirectory) {
@@ -109,6 +111,8 @@ export const ProcessCard: React.FC<ProcessCardProps> = ({
             className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-bold uppercase tracking-wide shrink-0 ${
               isRunning
                 ? "bg-emerald-100 text-emerald-700 border border-emerald-200"
+                : isStarted
+                ? "bg-amber-100 text-amber-700 border border-amber-200"
                 : "bg-slate-200 text-slate-600"
             }`}
             role="status"
@@ -122,6 +126,11 @@ export const ProcessCard: React.FC<ProcessCardProps> = ({
                 </span>
                 <Radio className="w-3.5 h-3.5 text-emerald-700" />
                 <span>RUNNING</span>
+              </>
+            ) : isStarted ? (
+              <>
+                <Loader2 className="w-3.5 h-3.5 text-amber-600 animate-spin" />
+                <span>STARTING</span>
               </>
             ) : (
               <>
@@ -232,8 +241,8 @@ export const ProcessCard: React.FC<ProcessCardProps> = ({
                 id={`env-input-${process.name}`}
                 value={selectedEnv}
                 onChange={(e) => setSelectedEnv(e.target.value)}
-                disabled={isStarting || !isAuthenticated}
-                className="bg-transparent text-xs text-slate-800 font-mono font-semibold focus:outline-none w-full cursor-pointer"
+                disabled={isStartingOrStarted || !isAuthenticated}
+                className="bg-transparent text-xs text-slate-800 font-mono font-semibold focus:outline-none w-full cursor-pointer disabled:cursor-not-allowed"
               >
                 <option value="local">local</option>
                 <option value="dev">dev</option>
@@ -244,11 +253,11 @@ export const ProcessCard: React.FC<ProcessCardProps> = ({
 
             <button
               type="submit"
-              disabled={isStarting || !isAuthenticated}
+              disabled={isStartingOrStarted || !isAuthenticated}
               className="flex items-center justify-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold uppercase transition-all shadow-sm active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
-              title={!isAuthenticated ? "Login required to start process" : `Start process with env=${selectedEnv}`}
+              title={!isAuthenticated ? "Login required to start process" : isStartingOrStarted ? "Process is starting..." : `Start process with env=${selectedEnv}`}
             >
-              {isStarting ? (
+              {isStartingOrStarted ? (
                 <>
                   <Loader2 className="w-3.5 h-3.5 animate-spin" />
                   <span>Starting...</span>
