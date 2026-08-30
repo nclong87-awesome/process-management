@@ -36,10 +36,17 @@ export const ProcessCard: React.FC<ProcessCardProps> = ({
   // Local state for the start environment input (defaults to globalEnv or process.env or "local")
   const [selectedEnv, setSelectedEnv] = useState<string>(globalEnv || process.env || "local");
   const [copiedDir, setCopiedDir] = useState(false);
+  const [isLocalStarting, setIsLocalStarting] = useState(false);
+
+  React.useEffect(() => {
+    if (process.status === "running" || process.status === "stopped") {
+      setIsLocalStarting(false);
+    }
+  }, [process.status]);
 
   const isRunning = process.status === "running";
   const isStarted = process.status === "started";
-  const isStartingOrStarted = isStarting || isStarted;
+  const isStartingOrStarted = isStarting || isStarted || isLocalStarting;
 
   const handleCopyDir = () => {
     if (process.workingDirectory) {
@@ -51,6 +58,7 @@ export const ProcessCard: React.FC<ProcessCardProps> = ({
 
   const handleStartSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setIsLocalStarting(true);
     onStart(process.name, selectedEnv || "local");
   };
 

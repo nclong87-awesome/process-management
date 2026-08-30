@@ -73,8 +73,18 @@ export const ProcessList: React.FC<ProcessListProps> = ({ onOpenSettings }) => {
 
   // Start process mutation
   const startMutation = useMutation({
-    mutationFn: async ({ name, env }: { name: string; env: string }) => {
+    onMutate: async ({ name }) => {
       setPendingStartNames((prev) => new Set(prev).add(name));
+      queryClient.setQueryData<ManagedProcessStatus[]>(["processes"], (old) => {
+        if (!old) return old;
+        return old.map((p) =>
+          p.name === name
+            ? { ...p, status: "started" }
+            : p
+        );
+      });
+    },
+    mutationFn: async ({ name, env }: { name: string; env: string }) => {
       return await startProcess(name, env);
     },
     onSuccess: (data) => {
@@ -94,6 +104,7 @@ export const ProcessList: React.FC<ProcessListProps> = ({ onOpenSettings }) => {
       queryClient.invalidateQueries({ queryKey: ["processes"] });
     },
     onError: (err: unknown, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["processes"] });
       let errMsg = "Failed to start process.";
       let details: string | undefined;
 
