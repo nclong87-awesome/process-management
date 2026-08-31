@@ -159,8 +159,16 @@ export async function fetchProcesses(): Promise<ManagedProcessStatus[]> {
   if (!hasUsableAuth()) {
     throw new AuthError("Authentication required. Please log in with Client ID and Client Secret in Settings.", "NO_AUTH");
   }
-  return authenticatedRequest<ManagedProcessStatus[]>("/api/processes", {
+  const rawList = await authenticatedRequest<Array<Partial<ManagedProcessStatus> & { launchProfile?: string; env?: string }>>("/api/processes", {
     method: "GET",
+  });
+  return rawList.map((proc) => {
+    const profile = proc.launchProfile || proc.env || "local";
+    return {
+      ...proc,
+      launchProfile: profile,
+      env: profile,
+    } as ManagedProcessStatus;
   });
 }
 

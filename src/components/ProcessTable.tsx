@@ -66,7 +66,7 @@ export const ProcessTable: React.FC<ProcessTableProps> = ({
   };
 
   const getRowEnv = (p: ManagedProcessStatus) => {
-    return rowEnvs[p.name] || p.env || globalEnv || "local";
+    return rowEnvs[p.name] || p.launchProfile || p.env || globalEnv || "local";
   };
 
   const setRowEnv = (name: string, env: string) => {
@@ -101,7 +101,7 @@ export const ProcessTable: React.FC<ProcessTableProps> = ({
                 PID & Port
               </th>
               <th scope="col" className="py-3 px-3">
-                Environment
+                Profile
               </th>
               <th scope="col" className="py-3 px-3">
                 Working Directory
@@ -205,11 +205,11 @@ export const ProcessTable: React.FC<ProcessTableProps> = ({
                     </div>
                   </td>
 
-                  {/* Environment Selector / Display */}
+                  {/* Profile Selector / Display */}
                   <td className="py-3 px-3 align-middle whitespace-nowrap">
                     {isRunning ? (
                       <span className="font-mono text-xs bg-slate-100 px-2 py-0.5 rounded border border-slate-200 font-semibold text-slate-800">
-                        {proc.env || "local"}
+                        {proc.launchProfile || proc.env || "local"}
                       </span>
                     ) : (
                       <select

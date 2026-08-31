@@ -296,7 +296,7 @@ export const ProcessList: React.FC<ProcessListProps> = ({ onOpenSettings }) => {
     if (succeeded > 0) {
       addNotification(
         "success",
-        `Successfully started ${succeeded} process(es) in '${envToUse}' environment.`,
+        `Successfully started ${succeeded} process(es) with '${envToUse}' profile.`,
         "Bulk Start Completed"
       );
     }
@@ -448,7 +448,7 @@ export const ProcessList: React.FC<ProcessListProps> = ({ onOpenSettings }) => {
           <div className="flex items-center gap-2 bg-slate-100 border border-slate-200 px-3 py-1.5 rounded-lg shrink-0">
             <Compass className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
             <label htmlFor="global-env-select" className="text-xs font-bold text-slate-600 font-mono">
-              Default env:
+              Default profile:
             </label>
             <select
               id="global-env-select"

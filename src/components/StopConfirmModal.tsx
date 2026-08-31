@@ -74,7 +74,7 @@ export const StopConfirmModal: React.FC<StopConfirmModalProps> = ({
                 </div>
                 <div className="flex justify-between text-slate-500 text-[11px]">
                   <span>PID: {p.processId ?? "N/A"}</span>
-                  <span>Env: {p.env || "local"}</span>
+                  <span>Profile: {p.launchProfile || p.env || "local"}</span>
                 </div>
               </div>
             ))}

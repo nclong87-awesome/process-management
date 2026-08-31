@@ -1,7 +1,8 @@
 export type ManagedProcessStatus = {
   name: string;
   workingDirectory: string;
-  env: string;
+  env?: string;
+  launchProfile?: string;
   port: number | null;
   appUrl: string | null;
   status: "running" | "stopped" | "started";

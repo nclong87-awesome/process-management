@@ -91,7 +91,7 @@ export const BulkToolbar: React.FC<BulkToolbarProps> = ({
           {/* Environment selector for Bulk Actions */}
           <div className="flex items-center gap-1.5 bg-white border border-slate-200 px-2.5 py-1 rounded-lg text-xs">
             <Compass className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
-            <span className="text-[11px] font-bold text-slate-500 font-mono">Bulk env:</span>
+            <span className="text-[11px] font-bold text-slate-500 font-mono">Bulk profile:</span>
             <select
               value={bulkEnv}
               onChange={(e) => onBulkEnvChange(e.target.value)}

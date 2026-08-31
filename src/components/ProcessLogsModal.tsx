@@ -151,7 +151,7 @@ export const ProcessLogsModal: React.FC<ProcessLogsModalProps> = ({
               </div>
               <p className="text-xs text-slate-400 flex items-center gap-2">
                 <span>
-                  Env: <strong className="text-slate-300 font-mono">{process.env || "local"}</strong>
+                  Profile: <strong className="text-slate-300 font-mono">{process.launchProfile || process.env || "local"}</strong>
                 </span>
                 <span>•</span>
                 <span>

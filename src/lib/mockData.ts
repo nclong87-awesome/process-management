@@ -8,6 +8,7 @@ export const INITIAL_MOCK_PROCESSES: ManagedProcessStatus[] = [
     name: "web-frontend",
     workingDirectory: "/var/www/web-frontend",
     env: "local",
+    launchProfile: "local",
     port: 3000,
     appUrl: "http://localhost:3000",
     status: "running",
@@ -17,6 +18,7 @@ export const INITIAL_MOCK_PROCESSES: ManagedProcessStatus[] = [
     name: "auth-service",
     workingDirectory: "/services/auth-api",
     env: "local",
+    launchProfile: "local",
     port: 5001,
     appUrl: "http://localhost:5001",
     status: "running",
@@ -26,6 +28,7 @@ export const INITIAL_MOCK_PROCESSES: ManagedProcessStatus[] = [
     name: "payment-gateway",
     workingDirectory: "/services/payment-v2",
     env: "dev",
+    launchProfile: "dev",
     port: 5002,
     appUrl: null,
     status: "stopped",
@@ -35,6 +38,7 @@ export const INITIAL_MOCK_PROCESSES: ManagedProcessStatus[] = [
     name: "notification-worker",
     workingDirectory: "/workers/notifications",
     env: "staging",
+    launchProfile: "staging",
     port: null,
     appUrl: null,
     status: "running",
@@ -44,6 +48,7 @@ export const INITIAL_MOCK_PROCESSES: ManagedProcessStatus[] = [
     name: "analytics-pipeline",
     workingDirectory: "/pipelines/analytics",
     env: "local",
+    launchProfile: "local",
     port: 8080,
     appUrl: null,
     status: "stopped",
@@ -53,6 +58,7 @@ export const INITIAL_MOCK_PROCESSES: ManagedProcessStatus[] = [
     name: "redis-cache-sync",
     workingDirectory: "/infrastructure/cache-sync",
     env: "production",
+    launchProfile: "production",
     port: 6379,
     appUrl: null,
     status: "running",
@@ -106,7 +112,7 @@ export function resetMockData(): ManagedProcessStatus[] {
   return INITIAL_MOCK_PROCESSES;
 }
 
-export async function mockStartProcess(name: string, env = "local"): Promise<StartProcessResponse> {
+export async function mockStartProcess(name: string, launchProfile = "local"): Promise<StartProcessResponse> {
   await new Promise((res) => setTimeout(res, 300));
   const processes = getMockProcesses();
   const existingIndex = processes.findIndex((p) => p.name === name);
@@ -116,7 +122,8 @@ export async function mockStartProcess(name: string, env = "local"): Promise<Sta
   if (existingIndex >= 0) {
     const proc = { ...processes[existingIndex] };
     proc.status = "running";
-    proc.env = env;
+    proc.env = launchProfile;
+    proc.launchProfile = launchProfile;
     proc.processId = randomPid;
     if (!proc.port && (name.includes("web") || name.includes("api") || name.includes("service"))) {
       proc.port = Math.floor(3000 + Math.random() * 5000);
@@ -127,7 +134,8 @@ export async function mockStartProcess(name: string, env = "local"): Promise<Sta
     processes.push({
       name,
       workingDirectory: `/apps/${name}`,
-      env,
+      env: launchProfile,
+      launchProfile,
       port: 8000,
       appUrl: `http://localhost:8000`,
       status: "running",

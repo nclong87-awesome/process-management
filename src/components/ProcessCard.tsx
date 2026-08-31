@@ -40,8 +40,8 @@ export const ProcessCard: React.FC<ProcessCardProps> = ({
   onRequestStop,
   onViewLogs,
 }) => {
-  // Local state for the start environment input (defaults to globalEnv or process.env or "local")
-  const [selectedEnv, setSelectedEnv] = useState<string>(globalEnv || process.env || "local");
+  // Local state for the start environment input (defaults to globalEnv or process.launchProfile or process.env or "local")
+  const [selectedEnv, setSelectedEnv] = useState<string>(globalEnv || process.launchProfile || process.env || "local");
   const [copiedDir, setCopiedDir] = useState(false);
   const [copiedUrl, setCopiedUrl] = useState(false);
   const [isLocalStarting, setIsLocalStarting] = useState(false);
@@ -187,14 +187,14 @@ export const ProcessCard: React.FC<ProcessCardProps> = ({
 
         {/* Process Meta Details */}
         <div className="space-y-2.5 my-4 bg-slate-50 rounded-lg p-3 border border-slate-200/80 text-xs">
-          {/* Environment */}
+          {/* Launch Profile */}
           <div className="flex items-center justify-between text-slate-600">
             <span className="text-slate-400 font-medium flex items-center gap-1.5">
               <Compass className="w-3.5 h-3.5 text-slate-400" />
-              Configured Env:
+              Launch Profile:
             </span>
             <span className="font-mono bg-white px-2 py-0.5 rounded border border-slate-200 text-slate-800 font-medium">
-              {process.env || "local"}
+              {process.launchProfile || process.env || "local"}
             </span>
           </div>
 
@@ -294,7 +294,7 @@ export const ProcessCard: React.FC<ProcessCardProps> = ({
           <form onSubmit={handleStartSubmit} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
             <div className="flex-1 flex items-center gap-1.5 bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 focus-within:ring-1 focus-within:ring-indigo-500">
               <label htmlFor={`env-input-${process.name}`} className="text-[11px] font-bold text-slate-500 font-mono uppercase shrink-0">
-                env:
+                profile:
               </label>
               <select
                 id={`env-input-${process.name}`}
