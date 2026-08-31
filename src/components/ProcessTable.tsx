@@ -306,7 +306,7 @@ export const ProcessTable: React.FC<ProcessTableProps> = ({
                           onClick={() => onStart(proc.name, selectedEnv)}
                           disabled={isStartingOrStarted || !isAuthenticated}
                           className="flex items-center gap-1 px-2.5 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-md text-xs font-bold uppercase transition-colors disabled:opacity-50 shadow-2xs"
-                          title={`Start process with env=${selectedEnv}`}
+                          title={`Start process with launchProfile=${selectedEnv}`}
                         >
                           {isStartingOrStarted ? (
                             <Loader2 className="w-3.5 h-3.5 animate-spin" />

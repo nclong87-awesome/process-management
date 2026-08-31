@@ -165,18 +165,18 @@ export async function fetchProcesses(): Promise<ManagedProcessStatus[]> {
 }
 
 /**
- * POST /api/processes/{name}/start?env=local
+ * POST /api/processes/{name}/start?launchProfile=local
  */
-export async function startProcess(name: string, env = "local"): Promise<StartProcessResponse> {
+export async function startProcess(name: string, launchProfile = "local"): Promise<StartProcessResponse> {
   if (isMockModeEnabled()) {
-    return mockStartProcess(name, env);
+    return mockStartProcess(name, launchProfile);
   }
   if (!hasUsableAuth()) {
     throw new AuthError("Authentication required. Please log in with Client ID and Client Secret in Settings.", "NO_AUTH");
   }
 
-  const selectedEnv = env && env.trim() !== "" ? env.trim() : "local";
-  const searchParams = new URLSearchParams({ env: selectedEnv });
+  const selectedLaunchProfile = launchProfile && launchProfile.trim() !== "" ? launchProfile.trim() : "local";
+  const searchParams = new URLSearchParams({ launchProfile: selectedLaunchProfile });
   const encodedName = encodeURIComponent(name);
   const path = `/api/processes/${encodedName}/start?${searchParams.toString()}`;
 
