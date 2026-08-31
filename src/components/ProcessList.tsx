@@ -17,6 +17,8 @@ import {
 import { fetchProcesses, startProcess, stopProcess, ApiError } from "../lib/api";
 import { ManagedProcessStatus } from "../types";
 import { ProcessCard } from "./ProcessCard";
+import { ProcessTable } from "./ProcessTable";
+import { BulkToolbar } from "./BulkToolbar";
 import { StopConfirmModal } from "./StopConfirmModal";
 import { ProcessLogsModal } from "./ProcessLogsModal";
 import { NotificationBanner, NotificationMessage } from "./NotificationBanner";
@@ -39,9 +41,17 @@ export const ProcessList: React.FC<ProcessListProps> = ({ onOpenSettings }) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "running" | "stopped">("all");
   const [globalEnv, setGlobalEnv] = useState("local");
+  const [bulkEnv, setBulkEnv] = useState("local");
   const [processToStop, setProcessToStop] = useState<ManagedProcessStatus | null>(null);
+  const [bulkStopTargets, setBulkStopTargets] = useState<ManagedProcessStatus[]>([]);
   const [selectedLogsProcessName, setSelectedLogsProcessName] = useState<string | null>(null);
   const [notifications, setNotifications] = useState<NotificationMessage[]>([]);
+
+  // Selection state & View mode
+  const [selectedNames, setSelectedNames] = useState<Set<string>>(new Set());
+  const [viewMode, setViewMode] = useState<"table" | "grid">("table");
+  const [isBulkStarting, setIsBulkStarting] = useState(false);
+  const [isBulkStopping, setIsBulkStopping] = useState(false);
 
   // Track pending mutation names
   const [pendingStartNames, setPendingStartNames] = useState<Set<string>>(new Set());
@@ -184,15 +194,12 @@ export const ProcessList: React.FC<ProcessListProps> = ({ onOpenSettings }) => {
   };
 
   const handleStart = (name: string, env: string) => {
-    // 1. Open Logs viewer modal for the process immediately when starting
     setSelectedLogsProcessName(name);
-    // 2. Trigger the start process mutation
     startMutation.mutate({ name, env });
   };
 
   const handleCloseLogsModal = async () => {
     setSelectedLogsProcessName(null);
-    // Re-fetch process list after closing Logs viewer modal
     await queryClient.invalidateQueries({ queryKey: ["processes"] });
     refetch();
   };
@@ -229,18 +236,140 @@ export const ProcessList: React.FC<ProcessListProps> = ({ onOpenSettings }) => {
   const runningCount = processes.filter((p) => p.status === "running").length;
   const stoppedCount = processes.filter((p) => p.status === "stopped").length;
 
+  // Multi-selection stats
+  const selectedCount = filteredProcesses.filter((p) => selectedNames.has(p.name)).length;
+  const isAllSelected = filteredProcesses.length > 0 && selectedCount === filteredProcesses.length;
+  const isSomeSelected = selectedCount > 0 && !isAllSelected;
+
+  const selectedRunningCount = filteredProcesses.filter(
+    (p) => selectedNames.has(p.name) && (p.status === "running" || p.status === "started")
+  ).length;
+
+  const selectedStoppedCount = filteredProcesses.filter(
+    (p) => selectedNames.has(p.name) && p.status === "stopped"
+  ).length;
+
+  // Multi-select handlers
+  const handleToggleSelect = (name: string) => {
+    setSelectedNames((prev) => {
+      const next = new Set(prev);
+      if (next.has(name)) {
+        next.delete(name);
+      } else {
+        next.add(name);
+      }
+      return next;
+    });
+  };
+
+  const handleToggleSelectAll = () => {
+    if (isAllSelected) {
+      setSelectedNames(new Set());
+    } else {
+      const allFilteredNames = filteredProcesses.map((p) => p.name);
+      setSelectedNames(new Set(allFilteredNames));
+    }
+  };
+
+  const handleClearSelection = () => {
+    setSelectedNames(new Set());
+  };
+
+  // Bulk Operations
+  const handleBulkStart = async () => {
+    const targetProcesses = filteredProcesses.filter(
+      (p) => selectedNames.has(p.name) && p.status === "stopped"
+    );
+
+    if (targetProcesses.length === 0) return;
+
+    setIsBulkStarting(true);
+    const envToUse = bulkEnv || globalEnv || "local";
+
+    const results = await Promise.allSettled(
+      targetProcesses.map((p) => startProcess(p.name, envToUse))
+    );
+
+    const succeeded = results.filter((r) => r.status === "fulfilled").length;
+    const failed = results.filter((r) => r.status === "rejected").length;
+
+    if (succeeded > 0) {
+      addNotification(
+        "success",
+        `Successfully started ${succeeded} process(es) in '${envToUse}' environment.`,
+        "Bulk Start Completed"
+      );
+    }
+    if (failed > 0) {
+      addNotification(
+        "error",
+        `Failed to start ${failed} process(es). Check process logs or backend settings.`,
+        "Bulk Start Errors"
+      );
+    }
+
+    await queryClient.invalidateQueries({ queryKey: ["processes"] });
+    setIsBulkStarting(false);
+  };
+
+  const handleBulkStopTrigger = () => {
+    const targets = filteredProcesses.filter(
+      (p) => selectedNames.has(p.name) && (p.status === "running" || p.status === "started")
+    );
+    if (targets.length === 0) return;
+    setBulkStopTargets(targets);
+  };
+
+  const handleConfirmBulkStop = async () => {
+    if (bulkStopTargets.length === 0) return;
+
+    setIsBulkStopping(true);
+    const results = await Promise.allSettled(bulkStopTargets.map((p) => stopProcess(p.name)));
+
+    const succeeded = results.filter((r) => r.status === "fulfilled").length;
+    const failed = results.filter((r) => r.status === "rejected").length;
+
+    if (succeeded > 0) {
+      addNotification(
+        "success",
+        `Successfully stopped ${succeeded} process(es).`,
+        "Bulk Stop Completed"
+      );
+    }
+    if (failed > 0) {
+      addNotification(
+        "error",
+        `Failed to stop ${failed} process(es).`,
+        "Bulk Stop Errors"
+      );
+    }
+
+    setBulkStopTargets([]);
+    await queryClient.invalidateQueries({ queryKey: ["processes"] });
+    setIsBulkStopping(false);
+  };
+
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+    <div className="w-full px-4 sm:px-6 lg:px-8 py-6 space-y-6">
       {/* Toast Notification Banner */}
       <NotificationBanner notifications={notifications} onDismiss={handleDismissNotification} />
 
-      {/* Confirmation Modal */}
+      {/* Single Process Stop Confirmation Modal */}
       <StopConfirmModal
         process={processToStop}
         isOpen={Boolean(processToStop)}
         isPending={stopMutation.isPending}
         onConfirm={handleConfirmStop}
         onCancel={() => setProcessToStop(null)}
+      />
+
+      {/* Bulk Stop Confirmation Modal */}
+      <StopConfirmModal
+        processes={bulkStopTargets}
+        isOpen={bulkStopTargets.length > 0}
+        isPending={isBulkStopping}
+        onConfirm={handleConfirmBulkStop}
+        onCancel={() => setBulkStopTargets([])}
       />
 
       {/* Process Logs Streaming Modal */}
@@ -324,7 +453,10 @@ export const ProcessList: React.FC<ProcessListProps> = ({ onOpenSettings }) => {
             <select
               id="global-env-select"
               value={globalEnv}
-              onChange={(e) => setGlobalEnv(e.target.value)}
+              onChange={(e) => {
+                setGlobalEnv(e.target.value);
+                setBulkEnv(e.target.value);
+              }}
               className="bg-transparent text-xs font-mono font-bold text-indigo-700 focus:outline-none cursor-pointer"
             >
               <option value="local">local</option>
@@ -401,7 +533,7 @@ export const ProcessList: React.FC<ProcessListProps> = ({ onOpenSettings }) => {
 
       {/* 2. Loading State */}
       {isAuthenticated && isLoading && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
           {[1, 2, 3].map((i) => (
             <div key={i} className="bg-white border border-slate-200 rounded-xl p-5 space-y-4 animate-pulse shadow-xs">
               <div className="flex justify-between items-center">
@@ -484,24 +616,69 @@ export const ProcessList: React.FC<ProcessListProps> = ({ onOpenSettings }) => {
         </div>
       )}
 
-      {/* 5. Process Grid Display */}
+      {/* 5. Process Display Area with Bulk Toolbar */}
       {isAuthenticated && !isLoading && !isError && filteredProcesses.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredProcesses.map((proc) => (
-            <ProcessCard
-              key={proc.name}
-              process={proc}
+        <div className="space-y-4">
+          {/* Bulk Operations Toolbar */}
+          <BulkToolbar
+            selectedCount={selectedCount}
+            totalCount={filteredProcesses.length}
+            selectedRunningCount={selectedRunningCount}
+            selectedStoppedCount={selectedStoppedCount}
+            isAllSelected={isAllSelected}
+            isSomeSelected={isSomeSelected}
+            bulkEnv={bulkEnv}
+            onBulkEnvChange={setBulkEnv}
+            onToggleSelectAll={handleToggleSelectAll}
+            onClearSelection={handleClearSelection}
+            onBulkStart={handleBulkStart}
+            onBulkStop={handleBulkStopTrigger}
+            isBulkStarting={isBulkStarting}
+            isBulkStopping={isBulkStopping}
+            isAuthenticated={isAuthenticated}
+            viewMode={viewMode}
+            onViewModeChange={setViewMode}
+          />
+
+          {/* Table View OR Grid Card View */}
+          {viewMode === "table" ? (
+            <ProcessTable
+              processes={filteredProcesses}
+              selectedNames={selectedNames}
               globalEnv={globalEnv}
-              isStarting={pendingStartNames.has(proc.name)}
-              isStopping={pendingStopNames.has(proc.name)}
+              pendingStartNames={pendingStartNames}
+              pendingStopNames={pendingStopNames}
               isAuthenticated={isAuthenticated}
+              onToggleSelect={handleToggleSelect}
+              onToggleSelectAll={handleToggleSelectAll}
+              isAllSelected={isAllSelected}
+              isSomeSelected={isSomeSelected}
               onStart={handleStart}
               onRequestStop={(p) => setProcessToStop(p)}
               onViewLogs={(p) => setSelectedLogsProcessName(p.name)}
             />
-          ))}
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
+              {filteredProcesses.map((proc) => (
+                <ProcessCard
+                  key={proc.name}
+                  process={proc}
+                  globalEnv={globalEnv}
+                  isStarting={pendingStartNames.has(proc.name)}
+                  isStopping={pendingStopNames.has(proc.name)}
+                  isAuthenticated={isAuthenticated}
+                  isSelected={selectedNames.has(proc.name)}
+                  onToggleSelect={handleToggleSelect}
+                  onStart={handleStart}
+                  onRequestStop={(p) => setProcessToStop(p)}
+                  onViewLogs={(p) => setSelectedLogsProcessName(p.name)}
+                />
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>
   );
 };
+

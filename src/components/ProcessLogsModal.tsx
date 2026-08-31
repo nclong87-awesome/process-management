@@ -10,7 +10,6 @@ import {
   Trash2,
   ArrowDown,
   Download,
-  AlertTriangle,
   Loader2,
   Filter,
   RefreshCw,
@@ -134,7 +133,7 @@ export const ProcessLogsModal: React.FC<ProcessLogsModalProps> = ({
       onClick={onClose}
     >
       <div
-        className="bg-slate-900 text-slate-100 border border-slate-700/80 rounded-2xl shadow-2xl w-full max-w-5xl h-[88vh] flex flex-col overflow-hidden"
+        className="bg-slate-900 text-slate-100 border border-slate-700/80 rounded-2xl shadow-2xl w-full max-w-7xl h-[88vh] flex flex-col overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Modal Header */}
@@ -445,27 +444,6 @@ export const ProcessLogsModal: React.FC<ProcessLogsModalProps> = ({
                 <span className="text-[11px] text-slate-400 shrink-0 font-mono" title={log.timestamp}>
                   {isNaN(Date.parse(log.timestamp)) ? log.timestamp : formattedTime}
                 </span>
-
-                {/* Accessible Stream Label & Icon (Differs by shape, icon, and explicit text label rather than color alone) */}
-                {isStderr ? (
-                  <span
-                    className="inline-flex items-center gap-1 text-[10px] font-mono font-bold uppercase px-1.5 py-0.5 rounded border-2 border-rose-800 bg-rose-950 text-rose-300 shrink-0 shadow-2xs"
-                    aria-label="Standard Error Stream (stderr)"
-                    title="Standard Error Stream (stderr)"
-                  >
-                    <AlertTriangle className="w-3 h-3 text-rose-400 shrink-0" aria-hidden="true" />
-                    <span>STDERR</span>
-                  </span>
-                ) : (
-                  <span
-                    className="inline-flex items-center gap-1 text-[10px] font-mono font-bold uppercase px-2 py-0.5 rounded-full border border-emerald-800/80 bg-emerald-950 text-emerald-400 shrink-0"
-                    aria-label="Standard Output Stream (stdout)"
-                    title="Standard Output Stream (stdout)"
-                  >
-                    <Terminal className="w-3 h-3 text-emerald-400 shrink-0" aria-hidden="true" />
-                    <span>STDOUT</span>
-                  </span>
-                )}
 
                 {/* Log Message Content */}
                 <span className="break-all whitespace-pre-wrap flex-1">{log.message}</span>

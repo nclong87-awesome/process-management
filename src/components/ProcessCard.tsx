@@ -21,6 +21,8 @@ interface ProcessCardProps {
   isStarting: boolean;
   isStopping: boolean;
   isAuthenticated: boolean;
+  isSelected?: boolean;
+  onToggleSelect?: (name: string) => void;
   onStart: (name: string, env: string) => void;
   onRequestStop: (process: ManagedProcessStatus) => void;
   onViewLogs: (process: ManagedProcessStatus) => void;
@@ -32,6 +34,8 @@ export const ProcessCard: React.FC<ProcessCardProps> = ({
   isStarting,
   isStopping,
   isAuthenticated,
+  isSelected = false,
+  onToggleSelect,
   onStart,
   onRequestStop,
   onViewLogs,
@@ -83,25 +87,31 @@ export const ProcessCard: React.FC<ProcessCardProps> = ({
   return (
     <div
       className={`relative flex flex-col justify-between rounded-xl border p-5 transition-all shadow-sm ${
-        isRunning
+        isSelected
+          ? "bg-indigo-50/40 border-indigo-400 ring-2 ring-indigo-500/20 shadow-indigo-100"
+          : isRunning
           ? "bg-white border-slate-200 hover:border-indigo-300"
           : "bg-white/80 border-slate-200 border-dashed bg-slate-50/50 hover:border-indigo-300"
       }`}
     >
       {/* Top Header Row */}
       <div>
-        {/* Header Bar: Status Badge & Logs Action */}
+        {/* Header Bar: Selection Checkbox, Status Badge & Logs Action */}
         <div className="flex items-center justify-between gap-2 mb-2.5">
           <div className="flex items-center gap-2">
-            <div
-              className={`p-1.5 rounded-lg border shrink-0 ${
-                isRunning
-                  ? "bg-emerald-100 border-emerald-200 text-emerald-700"
-                  : "bg-slate-100 border-slate-200 text-slate-400"
-              }`}
-            >
-              <Terminal className="w-4 h-4" />
-            </div>
+            {onToggleSelect && (
+              <label
+                className="flex items-center justify-center cursor-pointer p-0.5 rounded hover:bg-slate-200/60 transition-colors"
+                title={`Select process ${process.name}`}
+              >
+                <input
+                  type="checkbox"
+                  checked={isSelected}
+                  onChange={() => onToggleSelect(process.name)}
+                  className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 border-slate-300 cursor-pointer"
+                />
+              </label>
+            )}
 
             <div
               className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold uppercase tracking-wide shrink-0 ${

@@ -29,7 +29,7 @@ export const Header: React.FC<HeaderProps> = ({ onManualRefresh, isRefreshing, o
 
   return (
     <header className="sticky top-0 z-40 bg-white border-b border-slate-200 text-slate-900 shadow-xs px-4 sm:px-6 py-3">
-      <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+      <div className="w-full flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
         {/* Left branding & environment indicator */}
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white shrink-0 shadow-xs">
